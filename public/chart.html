@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Video Stream Graph</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+</head>
+<body>
+  <canvas id="graphCanvas"></canvas>
+  <script>
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+
+    const graphCanvas = document.getElementById('graphCanvas');
+    const graphCtx = graphCanvas.getContext('2d');
+
+    const data = {
+      labels: [],
+      datasets: [
+        {
+          label: 'Average Brightness',
+          data: [],
+          borderColor: 'rgba(75, 192, 192, 1)',
+          tension: 0.1
+        }
+      ]
+    };
+
+    const config = {
+      type: 'line',
+      data: data,
+      options: {
+        scales: {
+          x: { display: true },
+          y: { beginAtZero: true }
+        }
+      }
+    };
+
+    const myChart = new Chart(graphCtx, config);
+
+    function calculateAverageBrightness(imageData) {
+      let sum = 0;
+      const totalPixels = imageData.width * imageData.height;
+      for (let i = 0; i < imageData.data.length; i += 4) {
+        const r = imageData.data[i];
+        const g = imageData.data[i + 1];
+        const b = imageData.data[i + 2];
+        sum += (r + g + b) / 3;
+      }
+      return sum / totalPixels;
+    }
+
+    img.onload = function () {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx.drawImage(img, 0, 0, img.width, img.height);
+      const imageData = ctx.getImageData(0, 0, img.width, img.height);
+      const avgBrightness = calculateAverageBrightness(imageData);
+      data.labels.push(data.labels.length);
+      data.datasets[0].data.push(avgBrightness);
+      myChart.update();
+    };
+
+    const socket = io();
+    socket.on('frame', (frameDataURL) => {
+      img.src = frameDataURL;
+    });
+  </script>
+</body>
+</html>
